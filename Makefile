@@ -1,8 +1,8 @@
 AIRFLOW_VERSION ?= 1.8.0.0
-KUBECTL_VERSION ?= 1.6.1
+KUBECTL_VERSION ?= 1.10.7-gke.6
 KUBE_AIRFLOW_VERSION ?= 0.10
 
-REPOSITORY ?= mumoshu/kube-airflow
+REPOSITORY ?= benchsci/kube-airflow
 TAG ?= $(AIRFLOW_VERSION)-$(KUBECTL_VERSION)-$(KUBE_AIRFLOW_VERSION)
 IMAGE ?= $(REPOSITORY):$(TAG)
 ALIAS ?= $(REPOSITORY):$(AIRFLOW_VERSION)-$(KUBECTL_VERSION)
@@ -14,6 +14,7 @@ AIRFLOW_CONF ?= $(BUILD_ROOT)/config/airflow.cfg
 ENTRYPOINT_SH ?= $(BUILD_ROOT)/script/entrypoint.sh
 GIT_SYNC ?= $(BUILD_ROOT)/script/git-sync
 DAGS ?= $(BUILD_ROOT)/dags
+LIBS ?= $(BUILD_ROOT)/libs
 AIRFLOW_REQUIREMENTS ?= $(BUILD_ROOT)/requirements/airflow.txt
 DAGS_REQUIREMENTS ?= $(BUILD_ROOT)/requirements/dags.txt
 DOCKER_CACHE ?= docker-cache
@@ -25,6 +26,7 @@ HELM_VALUES ?= airflow/values.yaml
 CHART_LOCATION ?= ./airflow
 EMBEDDED_DAGS_LOCATION ?= "./dags"
 REQUIREMENTS_TXT_LOCATION ?= "requirements/dags.txt"
+EMBED_LIBS_LOCATION ?= "./libs"
 
 .PHONY: build clean
 
@@ -53,7 +55,7 @@ helm-ls:
 helm-uninstall:
 	helm del --purge $(HELM_APPLICATION_NAME)
 
-build: clean $(DOCKERFILE) $(ROOTFS) $(DAGS) $(AIRFLOW_CONF) $(ENTRYPOINT_SH) $(GIT_SYNC) $(AIRFLOW_REQUIREMENTS) $(DAGS_REQUIREMENTS)
+build: clean $(DOCKERFILE) $(ROOTFS) $(DAGS) $(LIBS) $(AIRFLOW_CONF) $(ENTRYPOINT_SH) $(GIT_SYNC) $(AIRFLOW_REQUIREMENTS) $(DAGS_REQUIREMENTS)
 	cd $(BUILD_ROOT) && docker build -t $(IMAGE) . && docker tag $(IMAGE) $(ALIAS)
 
 publish:
@@ -93,6 +95,10 @@ $(DAGS_REQUIREMENTS): $(BUILD_ROOT)
 $(DAGS): $(BUILD_ROOT)
 	mkdir -p $(shell dirname $(DAGS))
 	cp -R $(EMBEDDED_DAGS_LOCATION) $(DAGS)
+
+$(LIBS): $(BUILD_ROOT)
+	mkdir -p $(shell dirname $(LIBS))
+	cp -R $(EMBED_LIBS_LOCATION) $(LIBS)
 
 $(BUILD_ROOT):
 	mkdir -p $(BUILD_ROOT)

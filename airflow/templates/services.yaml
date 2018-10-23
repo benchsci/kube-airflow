@@ -8,7 +8,7 @@ metadata:
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
-  type: ClusterIP
+  type: LoadBalancer
   selector:
     app: {{ template "airflow.name" . }}-web
     release: {{ .Release.Name }}

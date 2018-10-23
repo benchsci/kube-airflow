@@ -1,0 +1,9 @@
+[submodule "libs/scinapsis_mining"]
+	path = libs/scinapsis_mining
+	url = https://github.com/benchsci/scinapsis_mining.git
+[submodule "libs/vendor_automation"]
+	path = libs/vendor_automation
+	url = https://github.com/benchsci/vendor_automation.git
+[submodule "libs/benchsci-pipeline"]
+	path = libs/benchsci-pipeline
+	url = https://github.com/benchsci/benchsci-pipeline.git
