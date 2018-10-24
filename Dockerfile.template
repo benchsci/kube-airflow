@@ -18,13 +18,14 @@ ENV     EMBEDDED_DAGS_LOCATION=%%EMBEDDED_DAGS_LOCATION%%
 ENV     REQUIREMENTS_TXT_LOCATION=%%REQUIREMENTS_TXT_LOCATION%%
 ENV     SLUGIFY_USES_TEXT_UNIDECODE=yes
 
-# Define en_US.
-ENV     LANGUAGE en_US.UTF-8
-ENV     LANG en_US.UTF-8
-ENV     LC_ALL en_US.UTF-8
-ENV     LC_CTYPE en_US.UTF-8
-ENV     LC_MESSAGES en_US.UTF-8
-ENV     LC_ALL en_US.UTF-8
+# # Define en_US.
+# ENV     LANGUAGE en_US.UTF-8
+# ENV     LANG en_US.UTF-8
+# ENV     LC_ALL en_US.UTF-8
+# ENV     LC_CTYPE en_US.UTF-8
+# ENV     LC_MESSAGES en_US.UTF-8
+# ENV     LC_ALL en_US.UTF-8
+ENV     JAVA_HOME /usr/lib/jvm/java-8-oracle
 
 WORKDIR /requirements
 # Only copy needed files
@@ -59,9 +60,7 @@ RUN         set -ex \
         &&      sed -i 's/^# en_US.UTF-8 UTF-8$/en_US.UTF-8 UTF-8/g' /etc/locale.gen \
         &&  locale-gen \
         &&  update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
-        &&  useradd -ms /bin/bash -d ${AIRFLOW_HOME} airflow
-
-RUN     set -ex \        
+        &&  useradd -ms /bin/bash -d ${AIRFLOW_HOME} airflow \    
         && pip install --upgrade pip setuptools \
         && rm -rf /usr/lib/python2.7/dist-packages/pip \
         && rm /usr/bin/pip \
@@ -70,14 +69,7 @@ RUN     set -ex \
         &&  pip install -r /requirements/airflow.txt \
         &&  pip install -r /requirements/dags.txt \
         &&  apt-get remove --purge -yqq $buildDeps \
-        &&  apt-get clean \
-        &&  rm -rf \
-                /var/lib/apt/lists/* \
-                /tmp/* \
-                /var/tmp/* \
-                /usr/share/man \
-                /usr/share/doc \
-                /usr/share/doc-base
+        &&  apt-get clean 
 
 ENV         KUBECTL_VERSION %%KUBECTL_VERSION%%
 
@@ -90,7 +82,7 @@ RUN         curl -L -o /usr/local/bin/kubectl \
 RUN apt-get update && apt-get install -y \
         gnupg \
         python-psycopg2 \    
-        libpq-dev \                    
+        libpq-dev \
         enchant \
         software-properties-common
 
@@ -115,19 +107,41 @@ RUN set -ex \
 COPY libs/scinapsis_mining /build/scinapsis_mining
 COPY libs/vendor_automation /build/vendor_automation
 
-RUN pip install cython
-RUN pip install -r /build/scinapsis_mining/requirements.txt
-RUN pip install -r /build/vendor_automation/requirements.txt
+# !! azure-storage must be pre-installed for azure module to resolve properly
+RUN pip install \
+        cython \
+        "urllib3==1.23" \
+        "pytest==3.7.1" \
+        "setuptools<=39.1.0" \
+        "azure-storage==0.34.0"
+# RUN pip install -r /build/scinapsis_mining/requirements.txt
+# RUN pip install -r /build/vendor_automation/requirements.txt
+RUN cd /build/vendor_automation && python setup.py install 
+RUN cd /build/scinapsis_mining && python setup.py install
 
-RUN python /build/scinapsis_mining/setup.py install
-RUN python /build/vendor_automation/setup.py install 
+COPY libs/benchsci-pipeline/requirements.txt /build/requirements.txt
+RUN pip install -r /build/requirements.txt
 
+# clean up
+RUN rm -rf \
+        /build/scinapsis_mining \
+        /build/vendor_automation \       
+        /var/lib/apt/lists/* \
+        /tmp/* \
+        /var/tmp/* \
+        /usr/share/man \
+        /usr/share/doc \
+        /usr/share/doc-base
 
 COPY        script/entrypoint.sh ${AIRFLOW_HOME}/entrypoint.sh
 COPY        config/airflow.cfg ${AIRFLOW_HOME}/airflow.cfg
 COPY        script/git-sync ${AIRFLOW_HOME}/git-sync
 COPY        ${EMBEDDED_DAGS_LOCATION} ${AIRFLOW_HOME}/dags
 COPY        script/git-sync ${AIRFLOW_HOME}/git-sync
+
+# copy over bs dags
+COPY        libs/vendor_automation/backend/dags ${AIRFLOW_HOME}/dags/vendor_automation
+COPY        libs/benchsci-pipeline/dags ${AIRFLOW_HOME}/dags/pipeline
 
 RUN         chown -R airflow: ${AIRFLOW_HOME} \
         &&  chmod +x ${AIRFLOW_HOME}/entrypoint.sh \

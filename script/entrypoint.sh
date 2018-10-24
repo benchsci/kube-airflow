@@ -10,11 +10,11 @@ RABBITMQ_CREDS="${RABBITMQ_CREDS:-airflow:airflow}"
 RABBITMQ_MANAGEMENT_PORT=15672
 FLOWER_URL_PREFIX="${FLOWER_URL_PREFIX:-}"
 AIRFLOW_URL_PREFIX="${AIRFLOW_URL_PREFIX:-}"
-LOAD_DAGS_EXAMPLES="${LOAD_DAGS_EXAMPLES:-true}"
+LOAD_DAGS_EXAMPLES="${LOAD_DAGS_EXAMPLES:-false}"
 GIT_SYNC_REPO="${GIT_SYNC_REPO:-}"
 
 if [ -z $FERNET_KEY ]; then
-    FERNET_KEY=$(python3 -c "from cryptography.fernet import Fernet; FERNET_KEY = Fernet.generate_key().decode(); print(FERNET_KEY)")
+    FERNET_KEY=$(python -c "from cryptography.fernet import Fernet; FERNET_KEY = Fernet.generate_key().decode(); print(FERNET_KEY)")
 fi
 
 echo "Postgres host: $POSTGRES_HOST"
@@ -32,6 +32,7 @@ sed -i "s/{{ RABBITMQ_CREDS }}/${RABBITMQ_CREDS}/" $AIRFLOW_HOME/airflow.cfg
 sed -i "s/{{ LOAD_DAGS_EXAMPLES }}/${LOAD_DAGS_EXAMPLES}/" $AIRFLOW_HOME/airflow.cfg
 sed -i "s#{{ FLOWER_URL_PREFIX }}#${FLOWER_URL_PREFIX}#" $AIRFLOW_HOME/airflow.cfg
 sed -i "s#{{ AIRFLOW_URL_PREFIX }}#${AIRFLOW_URL_PREFIX}#" $AIRFLOW_HOME/airflow.cfg
+
 
 # wait for rabbitmq
 if [ "$1" = "webserver" ] || [ "$1" = "worker" ] || [ "$1" = "scheduler" ] || [ "$1" = "flower" ] ; then
@@ -76,3 +77,7 @@ if [ ! -z $GIT_SYNC_REPO ]; then
 fi
 
 $CMD "$@"
+
+echo '--- DAG Folder'
+ls $AIRFLOW_HOME/dags
+ls $AIRFLOW_HOME/dags/vendor_automation
